@@ -4,13 +4,13 @@ on:
     paths:
       - "cyclondex/**"
       - "tests/**"
-      - "tools/memory_demo.py"
+      - "tools/**"
       - ".github/workflows/memory-r0.yml"
   pull_request:
     paths:
       - "cyclondex/**"
       - "tests/**"
-      - "tools/memory_demo.py"
+      - "tools/**"
       - ".github/workflows/memory-r0.yml"
 permissions:
   contents: read
