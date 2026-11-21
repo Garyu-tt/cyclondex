@@ -1,0 +1,29 @@
+name: CYCLON Noosphere Memory R0
+on:
+  push:
+    paths:
+      - "cyclondex/**"
+      - "tests/**"
+      - "tools/**"
+      - ".github/workflows/memory-r0.yml"
+  pull_request:
+    paths:
+      - "cyclondex/**"
+      - "tests/**"
+      - "tools/**"
+      - ".github/workflows/memory-r0.yml"
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Unit tests (offline, standard library)
+        run: python -m unittest discover -s tests -v
+      - name: Two-agent synthetic smoke test
+        run: PYTHONPATH=. python tools/memory_demo.py

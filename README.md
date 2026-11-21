@@ -74,3 +74,54 @@ Changes to external projects use explicit adapters or tracked pull requests.
 
 License for new CyclonDex contributions: **TBD**. Reused code retains its
 original copyright/license, including GPL requirements where applicable.
+
+## Noosphere Memory Native R0
+
+[Memory R0 architecture](docs/noosphere_memory_r0.md) · [Tracking issue #1](https://github.com/Garyu-tt/cyclondex/issues/1)
+
+A *read-only*, source-grounded Noosphere tool adapter now supports two
+independent CYCLON memory sessions, bounded untrusted memory retrieval and a
+small retrieval policy that learns from independent review. This is a tested
+research module, not an 80B model or an authenticated production integration.
+
+```sh
+python3 -m unittest discover -s tests -v
+PYTHONPATH=. python3 tools/memory_demo.py
+```
+
+The demo uses synthetic source records. Never configure private vault credentials
+in public CI or GitHub. A real Noosphere MCP transport and host ACL are still
+required before accessing production memory.
+
+### Memory-router learning (reviewed local traces)
+
+```sh
+PYTHONPATH=. python3 tools/train_memory_router.py --train /private/train.jsonl --eval /private/eval.jsonl
+```
+
+Each line is `{"task":"...","useful":true,"independently_reviewed":true}`.
+The tool streams examples and prints aggregate accuracy only. Those review flags
+must be verified by a trusted host: a JSON boolean is not authentication.
+Do not upload private training traces to GitHub.
+
+The [live Noosphere gate](docs/noosphere_live_gate.md) explains why the
+current `unified-tag-fabric-v1` service is **not yet wired in**: its
+owner-only and agent-shared records require enforced backend isolation.
+
+### Live Noosphere read-only smoke (operator-controlled)
+
+The live unified-tag-fabric adapter now validates each agent-shared object's
+SHA-256 before returning a bounded excerpt. A **content-silent** two-session
+probe can be run on a trusted Noosphere host with explicit paths:
+
+```sh
+PYTHONPATH=. python3 tools/noosphere_twins_probe.py \\
+  --db /trusted/noosphere/knowledge.sqlite3 \\
+  --objects /trusted/noosphere/objects --query 'проект'
+```
+
+On 21 Nov 2026, this passed on the live Noosphere server: 23/23 local
+unit tests; CYCLON A and B each retrieved one `agents` record, and B
+received one peer message. Only counts were printed, not memory content.
+The test process was ephemeral; **no production gateway was installed**.
+See [trusted read boundary](docs/noosphere_unified_r1.md).
