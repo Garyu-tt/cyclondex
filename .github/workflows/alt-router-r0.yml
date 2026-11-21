@@ -3,14 +3,14 @@ on:
   push:
     paths:
       - "cyclondex/**"
-      - "tools/alt_subset_profile.py"
-      - "tests/test_alt_expert_reduction.py"
+      - "tools/**"
+      - "tests/**"
       - ".github/workflows/alt-router-r0.yml"
   pull_request:
     paths:
       - "cyclondex/**"
-      - "tools/alt_subset_profile.py"
-      - "tests/test_alt_expert_reduction.py"
+      - "tools/**"
+      - "tests/**"
       - ".github/workflows/alt-router-r0.yml"
 permissions:
   contents: read
