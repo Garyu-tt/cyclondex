@@ -173,3 +173,75 @@ PYTHONPATH=. python3 tools/alt_saliency_compare.py \
   --counts /local/rtx5090-reap-counts.json \
   --out /local/saliency-comparison.json
 ```
+
+
+## Verified official *metadata-only* checkpoint inventory (21 Nov 2026)
+
+Retrieved the public `openai/gpt-oss-120b/config.json` and all chunks of
+`model.safetensors.index.json` through Hugging Face. This analysis
+downloaded **no tensor weights**.
+
+- Original model: `GptOssForCausalLM`, `gpt_oss`, 36 layers,
+  128 experts/layer, `experts_per_token=4`,
+  `num_experts_per_tok=4`, quantization `mxfp4`.
+- Safetensors index: **687 entries in 15 shards**; source size index metadata:
+  **65,248,815,744 bytes (60.768 GiB)**.
+- All **288** required per-layer MoE projection/router tensor names
+  for this checkpoint layout were present.
+- With the published 13,236,480 bytes per expert per layer assumption,
+  projected full checkpoint storage is:
+
+| Keep | Predicted bytes | Predicted GiB |
+|---:|---:|---:|
+| 48 | 27,127,753,344 | 25.265 |
+| 32 | 19,503,540,864 | 18.164 |
+| 16 | 11,879,328,384 | 11.063 |
+
+These are **unverified projections**, not actual exported artifacts.
+Quantized checkpoint tensor sizes and temporary conversion headroom
+still need end-to-end verification before deployment.
+
+`cyclondex.checkpoint_plan` now validates the original config and
+index, and generates an immutable 36-layer expert remapping plan
+from an existing score map, without ever reading weights:
+
+```sh
+PYTHONPATH=. python3 tools/alt_checkpoint_plan.py \
+  --config /local/model-config.json \
+  --index /local/model.safetensors.index.json \
+  --saliency /local/rtx5090-reap-saliency.json \
+  --keep 48 \
+  --out /local/alt48-plan.json
+```
+
+This is a **plan only**, not a weight exporter. A saliency ranking
+from another task/repository must not be promoted directly to a
+production GitHub-development model without calibration and independent
+quality tests.
+
+## Mikoshi hardware preflight
+
+For a read-only check **inside the intended Linux runtime** (not on
+the wrong Proxmox host or unrelated YodaBR server):
+
+```sh
+PYTHONPATH=. python3 tools/alt_host_preflight.py \
+  --weight-bytes 27127753344 --sessions 2 \
+  --kv-gib 1 --reserve-gib 8
+```
+
+The result reports current host memory and GPUs if `nvidia-smi` is
+available, plus the conservative RAM-only capacity check. This does
+**not** load a model, train, benchmark throughput, infer free VRAM,
+or alter any host files.
+
+**Pascal caveat:** the standard Hugging Face native MXFP4 backend
+requires NVIDIA compute capability >= 7.5; P106-100 is Pascal
+SM 6.1. Plan CPU-first inference/offload using a compatible
+backend and validate BitWeave experimentally, never advertise that
+native HF MXFP4 kernels run on these devices.
+
+An SSH port being reachable from the JediControl notebook is not
+proof that we can execute commands on Mikoshi in this session:
+the subsequent remote command was blocked by the tool security layer.
+No fresh Mikoshi GPU/VM200 resource measurement is claimed here.
