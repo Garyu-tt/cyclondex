@@ -128,3 +128,48 @@ an explicitly approved tolerance, resource and power ceilings, independent
 review, privacy-safe dataset, and rollback to ALT or stock gpt-oss-20b.
 
 This R0 covers only steps 2 (metadata shape), 3 and 4.
+
+
+## Published aggregate comparison (no model loading)
+
+A zero-download-of-weights sanity check was computed using the
+**public aggregate JSON results** in
+[bryanvine/gpt-oss-subset](https://github.com/bryanvine/gpt-oss-subset):
+
+- `results/rtx5090-reap-saliency.json`, Git blob SHA
+  `c85bab142f97dfe3010d938f5485ec69acaa729e`;
+- `results/rtx5090-reap-counts.json`, Git blob SHA
+  `2da534845f299a458981268a92f86a9699390912`.
+
+These represent *different score types on a published calibration*
+and have 36 layers × 128 experts. The tool selects the top-N from
+saliency versus the top-N from **frequency**, then calculates what
+fraction of the same published frequency counts each set retains.
+
+| Keep | Top-N counts retention | Top-N saliency set's counts retention | Mean overlap |
+|--:|--:|--:|--:|
+| 48 | 88.30% | 44.62% | 41.49% |
+| 32 | 78.77% | 31.33% | 30.03% |
+| 16 | 60.88% | 18.39% | 17.19% |
+
+**Interpretation:** the selections are very different. Frequency
+retention is defined here using *routed-expert counts*, not the
+quality of the next token and not percentage of unique tokens. In
+particular low count-retention of a high-saliency set does NOT mean
+that the model lost that fraction of its intelligence.
+
+The upstream study found task-specific quality recovery using
+REAP-style importance, despite frequency-only baselines failing.
+This motivates testing meaningful contribution metrics, not just
+count concentration. There is no held-out CYCLON model-quality test
+yet, and no claims about 16-expert performance.
+
+Reproduce with the two public JSON files downloaded into a private
+test directory (do not commit a large checkpoint or a dataset):
+
+```sh
+PYTHONPATH=. python3 tools/alt_saliency_compare.py \
+  --saliency /local/rtx5090-reap-saliency.json \
+  --counts /local/rtx5090-reap-counts.json \
+  --out /local/saliency-comparison.json
+```
