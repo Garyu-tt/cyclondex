@@ -15,7 +15,7 @@ Read-only schema checks on the owner-authorized YodaBR Linux host:
 
 `cyclondex.unified_store.SharedMemoryStore` is an experimental,
 read-only, fixed-SQL provider that selects only
-`unified_docs.visibility = 'agents'`, retrieves small excerpts, and
+`unified_docs.visibility = 'agents'`, retrieves small excerpts from SHA-256-verified UTF-8 objects, and
 never exposes `owner` rows or caller-supplied SQL. It does not return
 object paths, private blob contents or credentials. Results are tagged
 as **unreviewed**, not source-proven truth.
@@ -28,7 +28,7 @@ historical validity claims. It works with `TwinMemory`.
 In an isolated test or trusted host fixture, one may wire:
 
 ```python
-backend = SharedMemoryStore("/path/to/knowledge.sqlite3")
+backend = SharedMemoryStore("/path/to/knowledge.sqlite3", "/path/to/objects")
 def authorized_tool(action, args):
     if action != "unified.agent_shared.search":
         raise PermissionError(action)
@@ -50,6 +50,13 @@ a replacement for an authenticated provider capability, audit trail,
 rate limit, tamper-proof principal and independent negative ACL tests.
 Do not expose this provider on a public HTTP port; use approved internal
 capabilities only.
+
+Live read-only inspection found the FTS5 index is contentless. Exact
+index matches require opening the content-addressed objects after the
+visibility check. The gateway requires an operator-selected object root;
+it validates the relative hash path, file size, SHA-256 and rejects
+symlinks or changes during reading. The four currently shared objects
+passed hash and size checks without exposing their contents.
 
 No live Noosphere data is committed or used for training, and the
 adapter does not change the Noosphere backend. Source hash alone does
