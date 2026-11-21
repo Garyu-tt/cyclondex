@@ -74,3 +74,21 @@ Changes to external projects use explicit adapters or tracked pull requests.
 
 License for new CyclonDex contributions: **TBD**. Reused code retains its
 original copyright/license, including GPL requirements where applicable.
+
+## Noosphere Memory Native R0
+
+[Memory R0 architecture](docs/noosphere_memory_r0.md) · [Tracking issue #1](https://github.com/Garyu-tt/cyclondex/issues/1)
+
+A *read-only*, source-grounded Noosphere tool adapter now supports two
+independent CYCLON memory sessions, bounded untrusted memory retrieval and a
+small retrieval policy that learns from independent review. This is a tested
+research module, not an 80B model or an authenticated production integration.
+
+```sh
+python3 -m unittest discover -s tests -v
+PYTHONPATH=. python3 tools/memory_demo.py
+```
+
+The demo uses synthetic source records. Never configure private vault credentials
+in public CI or GitHub. A real Noosphere MCP transport and host ACL are still
+required before accessing production memory.
