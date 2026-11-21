@@ -1,0 +1,29 @@
+name: CYCLON ALT expert reduction R0
+on:
+  push:
+    paths:
+      - "cyclondex/**"
+      - "tools/alt_subset_profile.py"
+      - "tests/test_alt_expert_reduction.py"
+      - ".github/workflows/alt-router-r0.yml"
+  pull_request:
+    paths:
+      - "cyclondex/**"
+      - "tools/alt_subset_profile.py"
+      - "tests/test_alt_expert_reduction.py"
+      - ".github/workflows/alt-router-r0.yml"
+permissions:
+  contents: read
+jobs:
+  offline-router-profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Offline unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Syntax validation
+        run: python -m compileall -q cyclondex tools tests
