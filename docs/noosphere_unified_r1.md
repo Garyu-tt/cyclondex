@@ -74,3 +74,19 @@ into model checkpoints or training datasets.
 4. Run one authorized read-only end-to-end retrieval.
 5. Train retrieval policy only on independently verified and
    permitted, privacy-safe work traces, not private Noosphere text.
+
+## Live read-only smoke (21 Nov 2026)
+
+A clean, pinned CyclonDex revision was copied into a temporary working
+directory on the running Noosphere host and run against the existing DB
+in read-only mode. The test exited successfully with **23/23 offline tests**
+and a two-session memory-probe result:
+
+- Agent A: one permitted `agents` record, `agent_shared_unverified`.
+- Agent B: one permitted `agents` record, `agent_shared_unverified`,
+  one bounded peer message.
+- No memory content, titles or internal object paths appeared in output.
+- No Noosphere service or database was modified. No persistent worker installed.
+
+This is evidence for *retrieval correctness at test time*, not for
+production OS isolation, autonomous reasoning, or model quality.
