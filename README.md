@@ -74,3 +74,25 @@ Changes to external projects use explicit adapters or tracked pull requests.
 
 License for new CyclonDex contributions: **TBD**. Reused code retains its
 original copyright/license, including GPL requirements where applicable.
+
+
+## ALT → CYCLON: measured MoE expert reduction
+
+[Architecture and evaluation protocol](docs/alt_expert_reduction_r0.md) · [R1 on Mikoshi](https://github.com/Garyu-tt/cyclondex/issues/4) · [R2 weight remapping](https://github.com/Garyu-tt/cyclondex/issues/5)
+
+An experimental, zero-dependency profiler selects expert subsets using
+router/gate metadata from **separate calibration and evaluation traces**.
+It reports retained routing mass for 48, 32 and 16 experts per layer,
+never treating that statistic as proof of language-model accuracy.
+
+```sh
+python3 -m unittest discover -s tests -v
+PYTHONPATH=. python3 tools/alt_subset_profile.py \
+  --calibration /private/router-train.jsonl \
+  --holdout /private/router-test.jsonl \
+  --out /private/router-report.json
+```
+
+**No ALT weights were fetched or modified.** The profiler cannot yet
+train or prune a real 120B checkpoint. The scope of this module is
+explicitly separate from the Noosphere memory work in PR #2.
