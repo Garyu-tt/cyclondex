@@ -96,3 +96,16 @@ PYTHONPATH=. python3 tools/alt_subset_profile.py \
 **No ALT weights were fetched or modified.** The profiler cannot yet
 train or prune a real 120B checkpoint. The scope of this module is
 explicitly separate from the Noosphere memory work in PR #2.
+
+
+Published-score sanity check without weights:
+
+```sh
+PYTHONPATH=. python3 tools/alt_saliency_compare.py \
+  --saliency /private/rtx5090-reap-saliency.json \
+  --counts /private/rtx5090-reap-counts.json \
+  --out /private/alt-saliency-report.json
+```
+
+See `docs/alt_expert_reduction_r0.md` for the limitations of
+frequency counts versus contribution-aware REAP saliency.
