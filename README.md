@@ -92,3 +92,18 @@ PYTHONPATH=. python3 tools/memory_demo.py
 The demo uses synthetic source records. Never configure private vault credentials
 in public CI or GitHub. A real Noosphere MCP transport and host ACL are still
 required before accessing production memory.
+
+### Memory-router learning (reviewed local traces)
+
+```sh
+PYTHONPATH=. python3 tools/train_memory_router.py --train /private/train.jsonl --eval /private/eval.jsonl
+```
+
+Each line is `{"task":"...","useful":true,"independently_reviewed":true}`.
+The tool streams examples and prints aggregate accuracy only. Those review flags
+must be verified by a trusted host: a JSON boolean is not authentication.
+Do not upload private training traces to GitHub.
+
+The [live Noosphere gate](docs/noosphere_live_gate.md) explains why the
+current `unified-tag-fabric-v1` service is **not yet wired in**: its
+owner-only and agent-shared records require enforced backend isolation.
