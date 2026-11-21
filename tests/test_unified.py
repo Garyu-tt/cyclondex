@@ -1,4 +1,5 @@
-"""Adversarial ACL tests for an agent-shared-only read surface."""
+"""Adversarial ACL, content identity, and twin-session tests."""
+import hashlib
 import json
 import sqlite3
 import tempfile
@@ -8,38 +9,44 @@ from pathlib import Path
 from cyclondex.memory import MemoryUnavailable
 from cyclondex.twins import TwinMemory
 from cyclondex.unified_reader import UnifiedSharedReader
-from cyclondex.unified_store import SCHEMA, SharedMemoryStore
+from cyclondex.unified_store import SCHEMA, IntegrityError, SharedMemoryStore
 
 
 class Fixture(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        db_path = Path(self.tmp.name) / "knowledge.sqlite3"
-        with sqlite3.connect(db_path) as c:
+        root = Path(self.tmp.name)
+        self.db_path = root / "knowledge.sqlite3"
+        self.object_root = root / "objects"
+        self.object_root.mkdir()
+        self.objects = {}
+        with sqlite3.connect(self.db_path) as c:
             c.execute("""CREATE TABLE unified_docs (
-                id INTEGER PRIMARY KEY, title TEXT, kind TEXT,
-                sha256 TEXT, created_utc TEXT, visibility TEXT)""")
-            c.execute("CREATE VIRTUAL TABLE unified_fts USING fts5(title,content,tags,source)")
+                id INTEGER PRIMARY KEY, title TEXT, kind TEXT, sha256 TEXT,
+                created_utc TEXT, visibility TEXT, object_path TEXT, bytes INTEGER)""")
+            c.execute("CREATE VIRTUAL TABLE unified_fts USING fts5(title,content,tags,source,content='')")
             samples = [
-                (1, "owner secret", "PRIVATE_CANARY_DO_NOT_DISCLOSE fix",
-                 "owner"),
-                (2, "shared ci fix", "Run checks before merge",
-                 "agents"),
-                (3, "shared project plan", "Plan issues and review",
-                 "agents"),
-                (4, "owner fix", "Owner-only fix secret_42",
-                 "owner"),
+                (1, "owner secret", "PRIVATE_CANARY_DO_NOT_DISCLOSE fix", "owner"),
+                (2, "shared ci fix", "Run checks before merge", "agents"),
+                (3, "shared project plan", "Plan issues and review", "agents"),
+                (4, "owner fix", "Owner-only fix secret_42", "owner"),
             ]
-            for doc_id, title, content, visibility in samples:
+            for doc_id, title, data, visibility in samples:
+                encoded = data.encode("utf-8")
+                sha = hashlib.sha256(encoded).hexdigest()
+                target = self.object_root / sha[:2] / (sha + ".txt")
+                target.parent.mkdir(exist_ok=True)
+                target.write_bytes(encoded)
+                self.objects[doc_id] = target
                 c.execute("""INSERT INTO unified_docs
-                    (id,title,kind,sha256,created_utc,visibility)
-                    VALUES (?,?,'note','sha','2026-11-21T00:00:00Z',?)""",
-                          (doc_id,title,visibility))
+                    (id,title,kind,sha256,created_utc,visibility,object_path,bytes)
+                    VALUES (?,?,'note',?,'2026-11-21T00:00:00Z',?,?,?)""",
+                    (doc_id,title,sha,visibility,str(target),len(encoded)))
                 c.execute("""INSERT INTO unified_fts
                     (rowid,title,content,tags,source) VALUES (?,?,?,?,?)""",
-                          (doc_id,title,content,"",""))
-        self.store = SharedMemoryStore(db_path)
+                    (doc_id,title,data,"",""))
+        self.store = SharedMemoryStore(self.db_path, self.object_root)
 
     def gateway(self, action, args):
         self.assertEqual(action, "unified.agent_shared.search")
@@ -55,9 +62,10 @@ class Fixture(unittest.TestCase):
             self.assertNotIn("PRIVATE_CANARY", str(response))
             self.assertNotIn("secret_42", str(response))
             self.assertNotIn("owner secret", str(response))
-        response = self.store.search("fix")
-        self.assertEqual([r["id"] for r in response["records"]], ["2"])
-        self.assertEqual(response["schema"], SCHEMA)
+        result = self.store.search("fix")
+        self.assertEqual([r["id"] for r in result["records"]], ["2"])
+        self.assertEqual(result["records"][0]["excerpt"], "Run checks before merge")
+        self.assertEqual(result["schema"], SCHEMA)
 
     def test_acl_not_client_filter(self):
         def malicious(action, args):
@@ -84,7 +92,7 @@ class Fixture(unittest.TestCase):
         self.assertEqual(b["peer_messages_untrusted"][0]["sender"], "A")
         self.assertNotIn("PRIVATE_CANARY_DO_NOT_DISCLOSE", str((a,b)))
 
-    def test_limits_and_time_and_scope(self):
+    def test_limits_and_scope(self):
         with self.assertRaises(PermissionError):
             UnifiedSharedReader(self.gateway).recall("fix", "owner")
         with self.assertRaises(ValueError):
@@ -104,6 +112,18 @@ class Fixture(unittest.TestCase):
             self.assertEqual(db.execute(
                 "SELECT COUNT(*) FROM unified_docs").fetchone()[0], 4)
         self.assertEqual(self.store.search("plan"), original)
+
+    def test_refuse_repointed_object_to_owner(self):
+        with sqlite3.connect(self.db_path) as db:
+            db.execute("UPDATE unified_docs SET object_path = ? WHERE id = 2",
+                       (str(self.objects[1]),))
+        with self.assertRaises(IntegrityError):
+            self.store.search("fix")
+
+    def test_refuse_corrupted_shared_object(self):
+        self.objects[2].write_text("corrupted object", encoding="utf-8")
+        with self.assertRaises(IntegrityError):
+            self.store.search("fix")
 
     def test_provider_missing_or_bad_contract(self):
         def offline(action, args):
