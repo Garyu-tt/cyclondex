@@ -10,6 +10,7 @@ from cyclondex.memory import MemoryUnavailable
 from cyclondex.twins import TwinMemory
 from cyclondex.unified_reader import UnifiedSharedReader
 from cyclondex.unified_store import SCHEMA, IntegrityError, SharedMemoryStore
+from tools.noosphere_shared_probe import probe
 
 
 class Fixture(unittest.TestCase):
@@ -105,6 +106,13 @@ class Fixture(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.store.search("x" * 1025)
         self.assertEqual(self.store.search("a")["status"], "no_matches")
+
+    def test_probe_never_logs_memory_content(self):
+        result = probe(self.store, "fix")
+        self.assertEqual(result["verified_records"], 1)
+        self.assertFalse(result["contents_logged"])
+        self.assertNotIn("Run checks before merge", str(result))
+        self.assertNotIn("PRIVATE_CANARY", str(result))
 
     def test_read_only(self):
         original = self.store.search("plan")
