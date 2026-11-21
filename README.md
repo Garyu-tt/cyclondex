@@ -107,3 +107,21 @@ Do not upload private training traces to GitHub.
 The [live Noosphere gate](docs/noosphere_live_gate.md) explains why the
 current `unified-tag-fabric-v1` service is **not yet wired in**: its
 owner-only and agent-shared records require enforced backend isolation.
+
+### Live Noosphere read-only smoke (operator-controlled)
+
+The live unified-tag-fabric adapter now validates each agent-shared object's
+SHA-256 before returning a bounded excerpt. A **content-silent** two-session
+probe can be run on a trusted Noosphere host with explicit paths:
+
+```sh
+PYTHONPATH=. python3 tools/noosphere_twins_probe.py \\
+  --db /trusted/noosphere/knowledge.sqlite3 \\
+  --objects /trusted/noosphere/objects --query 'проект'
+```
+
+On 21 Nov 2026, this passed on the live Noosphere server: 23/23 local
+unit tests; CYCLON A and B each retrieved one `agents` record, and B
+received one peer message. Only counts were printed, not memory content.
+The test process was ephemeral; **no production gateway was installed**.
+See [trusted read boundary](docs/noosphere_unified_r1.md).
