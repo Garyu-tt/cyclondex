@@ -11,6 +11,7 @@ from cyclondex.twins import TwinMemory
 from cyclondex.unified_reader import UnifiedSharedReader
 from cyclondex.unified_store import SCHEMA, IntegrityError, SharedMemoryStore
 from tools.noosphere_shared_probe import probe
+from tools.noosphere_twins_probe import probe_twins
 
 
 class Fixture(unittest.TestCase):
@@ -113,6 +114,15 @@ class Fixture(unittest.TestCase):
         self.assertFalse(result["contents_logged"])
         self.assertNotIn("Run checks before merge", str(result))
         self.assertNotIn("PRIVATE_CANARY", str(result))
+
+    def test_two_agents_share_only_authorized_memory(self):
+        summary = probe_twins(self.store, "fix")
+        self.assertEqual(summary["agents"]["A"]["visible_records"], 1)
+        self.assertEqual(summary["agents"]["B"]["visible_records"], 1)
+        self.assertEqual(summary["agents"]["B"]["peer_messages"], 1)
+        self.assertFalse(summary["contents_logged"])
+        self.assertNotIn("Run checks", str(summary))
+        self.assertNotIn("PRIVATE_CANARY", str(summary))
 
     def test_read_only(self):
         original = self.store.search("plan")
