@@ -109,3 +109,16 @@ PYTHONPATH=. python3 tools/alt_saliency_compare.py \
 
 See `docs/alt_expert_reduction_r0.md` for the limitations of
 frequency counts versus contribution-aware REAP saliency.
+
+
+### Validated checkpoint metadata and Mikoshi resource guard
+
+An offline, fail-closed MXFP4 structural preflight is available in
+`tools/alt_checkpoint_plan.py`. It checks the original 36×128 model
+config plus all 288 indexed MoE tensors, creates reversible expert-index
+maps and predicts checkpoint sizes. **No weights are loaded or changed.**
+
+An optional, read-only `tools/alt_host_preflight.py` reports Linux
+memory and visible NVIDIA capabilities. Run inside the actual
+model-serving VM, not an unrelated host. A passing memory estimate
+does not establish tokens/sec or working CUDA/MXFP4 support.
